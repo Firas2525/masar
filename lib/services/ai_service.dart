@@ -8,7 +8,7 @@ import 'secure_storage_service.dart';
 /// API KEYS & MODELS
 /// =======================
 
-const String COHERE_API_KEY = 'fMJjeVzWd07LqQb5z4FpYIyuakPWZoSDCyH52GQF';
+const String COHERE_API_KEY = '';
 const String COHERE_MODEL = 'command-a-03-2025';
 
 const String HUGGING_FACE_API_KEY = '';
@@ -32,30 +32,35 @@ class AIService {
       /// 1️⃣ Try Cohere (chat) first
       /// =======================
       final _storedCohere = await SecureStorageService.getCohereApiKey();
-      final cohereKey = _storedCohere.trim().isNotEmpty ? _storedCohere.trim() : COHERE_API_KEY.trim();
+      final cohereKey = _storedCohere.trim().isNotEmpty
+          ? _storedCohere.trim()
+          : COHERE_API_KEY.trim();
 
       if (cohereKey.isNotEmpty) {
         final url = Uri.parse('https://api.cohere.ai/v1/chat');
 
         try {
-          final res = await http.post(
-            url,
-            headers: {
-              'Authorization': 'Bearer $cohereKey',
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode({
-              'model': COHERE_MODEL,
-              'message': question,
-              'temperature': 0.7,
-              'chat_history': [
-                {
-                  'role': 'SYSTEM',
-                  'message': 'أنت مساعد ذكي تجيب باللغة العربية فقط وباختصار'
-                }
-              ],
-            }),
-          ).timeout(const Duration(seconds: 30));
+          final res = await http
+              .post(
+                url,
+                headers: {
+                  'Authorization': 'Bearer $cohereKey',
+                  'Content-Type': 'application/json',
+                },
+                body: jsonEncode({
+                  'model': COHERE_MODEL,
+                  'message': question,
+                  'temperature': 0.7,
+                  'chat_history': [
+                    {
+                      'role': 'SYSTEM',
+                      'message':
+                          'أنت مساعد ذكي تجيب باللغة العربية فقط وباختصار',
+                    },
+                  ],
+                }),
+              )
+              .timeout(const Duration(seconds: 30));
 
           if (res.statusCode == 200) {
             final decoded = jsonDecode(res.body);
@@ -70,9 +75,12 @@ class AIService {
               } else if (decoded['output'] != null) {
                 final out = decoded['output'];
                 if (out is String) text = out;
-                if (out is List && out.isNotEmpty && out[0]['content'] != null) text = out[0]['content'].toString();
-                if (out is Map && out['content'] != null) text = out['content'].toString();
-              } else if (decoded['generations'] is List && decoded['generations'].isNotEmpty) {
+                if (out is List && out.isNotEmpty && out[0]['content'] != null)
+                  text = out[0]['content'].toString();
+                if (out is Map && out['content'] != null)
+                  text = out['content'].toString();
+              } else if (decoded['generations'] is List &&
+                  decoded['generations'].isNotEmpty) {
                 final gens = decoded['generations'];
                 if (gens[0]['text'] != null) text = gens[0]['text'].toString();
               }
@@ -84,7 +92,8 @@ class AIService {
 
             return decoded.toString();
           } else {
-            lastError = 'خطأ في Cohere (رمز ${res.statusCode})، سيتم استخدام التشخيص المحلي.';
+            lastError =
+                'خطأ في Cohere (رمز ${res.statusCode})، سيتم استخدام التشخيص المحلي.';
             return '$lastError\n\n${_localDiagnosis(car, question)}';
           }
         } catch (e) {
@@ -94,37 +103,43 @@ class AIService {
       }
 
       final _storedHf = await SecureStorageService.getHfApiKey();
-      final hfKey = _storedHf.trim().isNotEmpty ? _storedHf.trim() : HUGGING_FACE_API_KEY.trim();
+      final hfKey = _storedHf.trim().isNotEmpty
+          ? _storedHf.trim()
+          : HUGGING_FACE_API_KEY.trim();
 
       /// =======================
       /// 2️⃣ Hugging Face fallback
       /// =======================
       if (hfKey.isNotEmpty) {
-        final url = Uri.parse('https://api-inference.huggingface.co/models/$HUGGING_FACE_MODEL');
+        final url = Uri.parse(
+          'https://api-inference.huggingface.co/models/$HUGGING_FACE_MODEL',
+        );
 
-        final res = await http.post(
-          url,
-          headers: {
-            'Authorization': 'Bearer $hfKey',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode({
-            'inputs': prompt,
-            'parameters': {
-              'max_new_tokens': 300,
-              'temperature': 0.7,
-            },
-          }),
-        ).timeout(const Duration(seconds: 30));
+        final res = await http
+            .post(
+              url,
+              headers: {
+                'Authorization': 'Bearer $hfKey',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode({
+                'inputs': prompt,
+                'parameters': {'max_new_tokens': 300, 'temperature': 0.7},
+              }),
+            )
+            .timeout(const Duration(seconds: 30));
 
         if (res.statusCode == 200) {
           final decoded = jsonDecode(res.body);
-          if (decoded is List && decoded.isNotEmpty && decoded[0]['generated_text'] != null) {
+          if (decoded is List &&
+              decoded.isNotEmpty &&
+              decoded[0]['generated_text'] != null) {
             return decoded[0]['generated_text'];
           }
           return res.body;
         } else {
-          lastError = 'خطأ في HuggingFace (رمز ${res.statusCode})، سيتم استخدام التشخيص المحلي.';
+          lastError =
+              'خطأ في HuggingFace (رمز ${res.statusCode})، سيتم استخدام التشخيص المحلي.';
           return '$lastError\n\n${_localDiagnosis(car, question)}';
         }
       }
@@ -155,7 +170,8 @@ class AIService {
     }
     buffer.writeln('سؤال المستخدم: $question');
     buffer.writeln(
-        'اذكر الأسباب المحتملة مرتبة من الأكثر شيوعًا إلى الأقل، مع خطوات فحص عملية.');
+      'اذكر الأسباب المحتملة مرتبة من الأكثر شيوعًا إلى الأقل، مع خطوات فحص عملية.',
+    );
     buffer.writeln('أجب بإيجاز وبدون ذكر أنك ذكاء اصطناعي.');
     return buffer.toString();
   }
@@ -171,35 +187,40 @@ class AIService {
 
     if (mileage > 150000) {
       suggestions.add(
-          'المسافة المقطوعة عالية: افحص المحرك، شمعات الإشعال، ضغط الزيت، وفلتر الوقود.');
+        'المسافة المقطوعة عالية: افحص المحرك، شمعات الإشعال، ضغط الزيت، وفلتر الوقود.',
+      );
     } else if (mileage > 100000) {
       suggestions.add(
-          'المسافة المقطوعة متوسطة: راجع نظام التزييت، التبريد، وسير الكاتينة.');
+        'المسافة المقطوعة متوسطة: راجع نظام التزييت، التبريد، وسير الكاتينة.',
+      );
     }
 
     if (q.contains('صوت') || q.contains('طرق') || q.contains('طرقعة')) {
       suggestions.add(
-          'وجود صوت غير طبيعي: افحص نظام العادم، التعليق، والمحامل.');
+        'وجود صوت غير طبيعي: افحص نظام العادم، التعليق، والمحامل.',
+      );
     }
 
     if (q.contains('حرارة') || q.contains('سخونة')) {
       suggestions.add(
-          'ارتفاع الحرارة: تحقق من سائل التبريد، المروحة، الثرموستات، وطرمبة المياه.');
+        'ارتفاع الحرارة: تحقق من سائل التبريد، المروحة، الثرموستات، وطرمبة المياه.',
+      );
     }
 
     if (q.contains('لا يعمل') || q.contains('لا يبدأ') || q.contains('يدور')) {
       suggestions.add(
-          'مشكلة تشغيل: افحص البطارية، الدينامو، مضخة الوقود، وشرارة الإشعال.');
+        'مشكلة تشغيل: افحص البطارية، الدينامو، مضخة الوقود، وشرارة الإشعال.',
+      );
     }
 
     if (q.contains('زيت') || q.contains('تسريب')) {
-      suggestions.add(
-          'تسريب سوائل: افحص خراطيم الزيت، كرتير الزيت، والوصلات.');
+      suggestions.add('تسريب سوائل: افحص خراطيم الزيت، كرتير الزيت، والوصلات.');
     }
 
     if (q.contains('اهتزاز') || q.contains('رجفة')) {
       suggestions.add(
-          'اهتزاز السيارة: قد يكون من توازن الإطارات، الفرامل، أو قواعد المحرك.');
+        'اهتزاز السيارة: قد يكون من توازن الإطارات، الفرامل، أو قواعد المحرك.',
+      );
     }
 
     if (suggestions.isEmpty) {
@@ -215,4 +236,3 @@ class AIService {
 /// =======================
 /// Example Car Model
 /// =======================
-

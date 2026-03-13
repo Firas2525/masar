@@ -112,10 +112,10 @@ const textStyleCaption = TextStyle(
 // Hugging Face configuration
 // To use the Hugging Face Inference API, set `HUGGING_FACE_API_KEY` to your token.
 // Leave empty to use the built-in offline rule-based fallback (free, no network needed).
-const String HUGGING_FACE_API_KEY = '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';
+const String HUGGING_FACE_API_KEY = '';
 const String HUGGING_FACE_MODEL = 'google/flan-t5-large';
 
 // Cohere configuration
 // You can store the Cohere API key here for quick testing or save it securely in app settings.
-const String COHERE_API_KEY = 'fMJjeVzWd07LqQb5z4FpYIyuakPWZoSDCyH52GQF';
+const String COHERE_API_KEY = '';
 const String COHERE_MODEL = 'command-a-03-2025';
